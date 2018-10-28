@@ -5,7 +5,6 @@ Created on Thu Oct 25 23:40:06 2018
 
 @author: Ethan Cheng
 """
-
 import numpy as np
 import cv2
 import glob
@@ -13,8 +12,10 @@ import matplotlib.pyplot as plt
 import matplotlib.image as mpimg
 import pickle
 import os
+
+
 #%%
-class laneProcessPipeline(object):
+class laneFinder(object):
     
     
     def __init__(self, params):
@@ -112,15 +113,126 @@ class laneProcessPipeline(object):
         return self.cut_and_show(scaled_sobel, self.gradx_cut, figID, title)
     
     
-    def test_perspetive_transform(self):
+    def unit_test(self):
+        # dump undistortion results
+        
+        # dump perspective warping         
         files = glob.glob(self.imgPath + '/*.jpg')
         for i, file in enumerate(files):
             self.warp_perspective(self.undistort(mpimg.imread(file)), i+1)
             fig = plt.figure(i+1)
             plt.show()
             fig.savefig(self.outPath + '/warped_' + os.path.basename(file))
+        
+        # dump pipeline intermediate results
     
+    def find_polyfit_lanes(self,binary_warped, figID = 0):
+        # Take a histogram of the bottom half of the image
+        histogram = np.sum(binary_warped[binary_warped.shape[0]//2:,:], axis=0)
+        out_img = []
+        if figID >0:
+            plt.figure(figID)
+            plt.clf()
+            # Create an output image to draw on and visualize the result
+            out_img = np.dstack((binary_warped, binary_warped, binary_warped)) * 255
+        # Find the peak of the left and right halves of the histogram
+        # These will be the starting point for the left and right lines
+        midpoint = np.int(histogram.shape[0]//2)
+        leftx_base = np.argmax(histogram[:midpoint])
+        rightx_base = np.argmax(histogram[midpoint:]) + midpoint
     
+        # Set height of windows - based on nwindows above and image shape
+        window_height = np.int(binary_warped.shape[0]//self.nwindows)
+        # Identify the x and y positions of all nonzero pixels in the image
+        nonzero = binary_warped.nonzero()
+        nonzeroy = np.array(nonzero[0])
+        nonzerox = np.array(nonzero[1])
+        # Current positions to be updated later for each window in nwindows
+        leftx_current = leftx_base
+        rightx_current = rightx_base
+
+        # Create empty lists to receive left and right lane pixel indices
+        left_lane_inds = []
+        right_lane_inds = []
+
+        # Step through the windows one by one
+        for window in range(self.nwindows):
+            # select window veritical range
+            win_y_low = binary_warped.shape[0] - (window+1)*window_height
+            win_y_high = binary_warped.shape[0] - window*window_height
+            # Select window horizontal range
+            win_xleft_low = leftx_current - self.margin 
+            win_xleft_high = leftx_current + self.margin 
+            win_xright_low = rightx_current - self.margin
+            win_xright_high = rightx_current + self.margin 
+        
+            if figID > 0:
+                # Draw the windows on the visualization image
+                cv2.rectangle(out_img,(win_xleft_low,win_y_low),
+                (win_xleft_high,win_y_high),(0,255,0), 2) 
+                cv2.rectangle(out_img,(win_xright_low,win_y_low),
+                (win_xright_high,win_y_high),(0,255,0), 2) 
+                plt.imshow(out_img)
+
+        
+            #Identify the nonzero pixels in x and y within the window
+            good_left_inds  = ((nonzerox > win_xleft_low) & (nonzerox <= win_xleft_high) & \
+                (nonzeroy > win_y_low) & (nonzeroy <= win_y_high)).nonzero()[0]
+            good_right_inds = ((nonzerox > win_xright_low) & (nonzerox <= win_xright_high) & \
+                (nonzeroy > win_y_low) & (nonzeroy <= win_y_high)).nonzero()[0]
+            
+            # Append these indices to the lists
+            left_lane_inds.append(good_left_inds)
+            right_lane_inds.append(good_right_inds)
+        
+            # found > minpix pixels, recenter next window
+            # (`right` or `leftx_current`) on their mean position 
+            if len(good_left_inds) > self.minpix:
+                leftx_current = int(np.mean(nonzerox[good_left_inds]))
+            if len(good_right_inds) > self.minpix:
+                rightx_current = int(np.mean(nonzerox[good_right_inds]))
+
+        # Concatenate the arrays of indices (previously was a list of lists of pixels)
+        try:
+            left_lane_inds = np.concatenate(left_lane_inds)
+            right_lane_inds = np.concatenate(right_lane_inds)
+        except ValueError:
+            # Avoids an error if the above is not implemented fully
+            pass
+
+        # Extract left and right line pixel positions
+        leftx = nonzerox[left_lane_inds]
+        lefty = nonzeroy[left_lane_inds] 
+        rightx = nonzerox[right_lane_inds]
+        righty = nonzeroy[right_lane_inds]
+    
+        # Fit a second order polynomial to each using `np.polyfit`
+        left_fit = np.polyfit(lefty, leftx, 2)
+        right_fit = np.polyfit(righty, rightx, 2)
+    
+        # Generate x and y values for plotting
+        ploty = np.linspace(0, self.rows-1, self.rows)
+        try:
+            left_fitx = left_fit[0]*ploty**2 + left_fit[1]*ploty + left_fit[2]
+            right_fitx = right_fit[0]*ploty**2 + right_fit[1]*ploty + right_fit[2]
+        except TypeError:
+            # Avoids an error if `left` and `right_fit` are still none or incorrect
+            print('The function failed to fit a line!')
+            left_fitx = 1*ploty**2 + 1*ploty
+            right_fitx = 1*ploty**2 + 1*ploty
+
+        if figID > 0:
+            # Colors in left/right lanes
+            out_img[lefty, leftx] = [255, 0, 0]
+            out_img[righty, rightx] = [0, 0, 255]
+            # Plots the left and right polynomials on the lane lines
+            plt.plot(left_fitx, ploty, color='yellow')
+            plt.plot(right_fitx, ploty, color='yellow')
+            plt.imshow(out_img)
+            plt.title('Lanes pixels and Windows')
+        return left_fit, right_fit    
+            
+
     def process(self, img, show = False):
         # step 1: undistortion
         undist = self.undistort(img, int(show)*1)
@@ -129,11 +241,14 @@ class laneProcessPipeline(object):
         #step 3: extract x-gradient feature
         grad_mask = self.extract_gradient(undist, int(show)*3, 'x-gradient mask')
         # step 4: combine color + gradient  
-        stack_mask = np.dstack((np.zeros_like(color_mask), grad_mask, color_mask))*255
+        combo = (color_mask | grad_mask)
         if show:
+            stack_mask = np.dstack((np.zeros_like(color_mask), grad_mask, color_mask))*255
             plt.figure(int(show)*4)
             plt.imshow(stack_mask)
-            plt.title('Combined color + gradient mask')         
+            plt.title('Combined color + gradient mask')        
+
+        return self.warp_perspective(combo)
         # step 5: apply perspective transformation
         
         # step 6: extract lanes
