@@ -12,7 +12,7 @@ import glob
 import matplotlib.pyplot as plt
 import matplotlib.image as mpimg
 import pickle
-
+import os
 #%%
 class laneProcessPipeline(object):
     
@@ -110,42 +110,43 @@ class laneProcessPipeline(object):
         abs_sobelx = np.absolute(gradx)
         scaled_sobel = np.uint8(255*abs_sobelx/np.max(abs_sobelx))
         return self.cut_and_show(scaled_sobel, self.gradx_cut, figID, title)
-        
+    
+    
+    def test_perspetive_transform(self):
+        files = glob.glob(self.imgPath + '/*.jpg')
+        for i, file in enumerate(files):
+            self.warp_perspective(self.undistort(mpimg.imread(file)), i+1)
+            fig = plt.figure(i+1)
+            plt.show()
+            fig.savefig(self.outPath + '/warped_' + os.path.basename(file))
+    
     
     def process(self, img, show = False):
+        # step 1: undistortion
         undist = self.undistort(img, int(show)*1)
+        # step 2: extract color feature
         color_mask = self.select_color(undist, int(show)*2, 'color mask')
+        #step 3: extract x-gradient feature
         grad_mask = self.extract_gradient(undist, int(show)*3, 'x-gradient mask')
+        # step 4: combine color + gradient  
         stack_mask = np.dstack((np.zeros_like(color_mask), grad_mask, color_mask))*255
         if show:
             plt.figure(int(show)*4)
             plt.imshow(stack_mask)
             plt.title('Combined color + gradient mask')         
-            
+        # step 5: apply perspective transformation
+        
+        # step 6: extract lanes
+        
+        # step 7: fit curves
+        
+        # step 8: reverse warping back to color image
+        
+        
+        # step 8: paint lanes
+        
+        
+        
         return img
     
-
-
-params = {
-        'calibPath' : 'camera_cal',
-        'imgPath'   : 'test_images',
-        'HLS_select' : 2, # pick saturation
-        'HLS_cut' : [90, 255],
-        'gradx_cut': [20, 100],
-        'rows': 720,
-        'cols': 1280,       
-        } 
-        
-lpp = laneProcessPipeline(params)
-lpp.calib()
-#imshow(self.imgCalibOut)
-#%%
-
-lpp.warp_perspective(lpp.undistort(lpp.imread('test1.jpg')),1)
-lpp.warp_perspective(lpp.undistort(lpp.imread('test2.jpg')),2)
-lpp.warp_perspective(lpp.undistort(lpp.imread('test3.jpg')),3)
-lpp.warp_perspective(lpp.undistort(lpp.imread('test4.jpg')),4)
-lpp.warp_perspective(lpp.undistort(lpp.imread('test5.jpg')),5)
-lpp.warp_perspective(lpp.undistort(lpp.imread('straight_lines1.jpg')),6)
-lpp.warp_perspective(lpp.undistort(lpp.imread('straight_lines2.jpg')),7)
 
