@@ -22,18 +22,13 @@ params = {
         # peak search params       
         'nwindows': 9,
         'margin': 100, # width of the windows
-        'minpix': 50
+        'minpix': 150,
         # Define conversions in x and y from pixels space to meters
-        'ym_per_pix': 30/720  # meters per pixel in y dimension
-        'xm_per_pix': 3.7/700 # meters per pixel in x dimension
+        'ym_per_pix': 30/720.,  # meters per pixel in y dimension
+        'xm_per_pix': 3.7/700, # meters per pixel in x dimension
+        'warp_xL': 320
         } 
         
 lane_detect = laneFinder(params)
-#%%lpp.calib()
-#lpp.unit_test()
-img = lane_detect.imread('test1.jpg')
-binary_warped = lane_detect.process(img)
-left_fit, right_fit = lane_detect.find_polylanes(binary_warped, 3)
-left_fitx, right_fitx, left_fit_refined, right_fit_refined = lane_detect.refine_polylanes(binary_warped, left_fit, right_fit, 4)
-
-self = lane_detect
+lane_detect.calib()
+lane_detect.dump_pipeline_staged_result()
