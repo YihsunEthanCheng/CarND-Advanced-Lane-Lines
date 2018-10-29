@@ -95,17 +95,17 @@ class laneFinder(object):
         return mpimg.imread(self.imgPath + '/' + fname)
         
     
-    def select_color(self, img, figID = 0, title = ''):
+    def select_color(self, img):
         hls = cv2.cvtColor(img, cv2.COLOR_RGB2HLS)[:,:,self.HLS_select];
-        return self.threshold(hls, self.HLS_cut, figID, title)
+        return self.threshold(hls, self.HLS_cut)
         
     
-    def extract_gradient(self, img, figID = 0, title = ''):
+    def extract_gradient(self, img):
         gray = cv2.cvtColor(img, cv2.COLOR_RGB2GRAY)
         gradx = cv2.Sobel(gray, cv2.CV_64F, 1, 0)
         abs_sobelx = np.absolute(gradx)
         scaled_sobel = np.uint8(255*abs_sobelx/np.max(abs_sobelx))
-        return self.cut_and_show(scaled_sobel, self.gradx_cut, figID, title)
+        return self.threshold(scaled_sobel, self.gradx_cut)
     
       
     def find_polylanes(self,binary_warped, figID = 0):
@@ -288,27 +288,22 @@ class laneFinder(object):
         return out_img
     
 #%%
-    def process(self, img, show = False):
+    def process(self, img):
         # step 1: undistortion
-        undist = self.undistort(img, show*1)
+        undist = self.undistort(img)
         # step 2: extract color feature
-        color_mask = self.select_color(undist, show*2, 'color mask')
+        color_mask = self.select_color(undist)
         #step 3: extract x-gradient feature
-        grad_mask = self.extract_gradient(undist, show*3, 'x-gradient mask')
+        grad_mask = self.extract_gradient(undist)
         # step 4: combine color + gradient  
         combo = (color_mask | grad_mask)
-        if show:
-            stack_mask = np.dstack((np.zeros_like(color_mask), grad_mask, color_mask))*255
-            plt.figure(show*4)
-            plt.imshow(stack_mask)
-            plt.title('Combined color + gradient mask')        
         # step 5: apply perspective transformation
         binary_warped = self.warp_perspective(combo)
         # step 6: find lines of a lane from polynomial fit
-        left_fit, right_fit = self.find_polylanes(binary_warped, show*5)
+        left_fit, right_fit = self.find_polylanes(binary_warped)
         # step 7: refine polynomial fit with the guidanc of the previous polynomial fit
         left_fitx, right_fitx, left_fit_refined, right_fit_refined = \
-            self.refine_polylanes(binary_warped, left_fit, right_fit, show*6)
+            self.refine_polylanes(binary_warped, left_fit, right_fit)
         # step 8: generate overlay image from unwarping the painted lanes
         overlay = self.paintBetweenLines(np.zeros_like(img), left_fitx, right_fitx, (0,255,0))
         unwarped_overlay = cv2.warpPerspective(overlay, self.TpInv, img.shape[:2][::-1], flags=cv2.INTER_LINEAR)
