@@ -200,22 +200,21 @@ class laneFinder(object):
         left_fit = np.polyfit(lefty, leftx, 2)
         right_fit = np.polyfit(righty, rightx, 2)
         if figID > 0:
-           # Generate x and y values for plotting
-            ploty = np.linspace(0, self.rows-1, self.rows)
+            # Generate x and y values for plotting
             try:
-                left_fitx = left_fit[0]*ploty**2 + left_fit[1]*ploty + left_fit[2]
-                right_fitx = right_fit[0]*ploty**2 + right_fit[1]*ploty + right_fit[2]
+                left_fitx = left_fit[0]*self.ploty**2 + left_fit[1]*self.ploty + left_fit[2]
+                right_fitx = right_fit[0]*self.ploty**2 + right_fit[1]*self.ploty + right_fit[2]
             except TypeError:
                 # Avoids an error if `left` and `right_fit` are still none or incorrect
                 print('The function failed to fit a line!')
-                left_fitx = 1*ploty**2 + 1*ploty
-                right_fitx = 1*ploty**2 + 1*ploty
+                left_fitx = 1*self.ploty**2 + 1*self.ploty
+                right_fitx = 1*self.ploty**2 + 1*self.ploty
             # Colors in left/right lanes
             out_img[lefty, leftx] = [255, 0, 0]
             out_img[righty, rightx] = [0, 0, 255]
             # Plots the left and right polynomials on the lane lines
-            plt.plot(left_fitx, ploty, color='yellow')
-            plt.plot(right_fitx, ploty, color='yellow')
+            plt.plot(left_fitx, self.ploty, color='yellow')
+            plt.plot(right_fitx, self.ploty, color='yellow')
             plt.imshow(out_img)
             plt.title('Lanes pixels and Windows')
         return left_fit, right_fit    
@@ -227,6 +226,9 @@ class laneFinder(object):
 
 
     def paintBetweenLines(self, window_img, line_fitx_left, line_fitx_right, color):
+        '''
+        Paint a region between two lines of x-coordinates 
+        '''
         # form polygon
         line_left  = np.vstack([line_fitx_left, self.ploty])
         line_right = np.vstack([line_fitx_right, self.ploty])[:,::-1]
@@ -236,6 +238,9 @@ class laneFinder(object):
 
 
     def refine_polylanes(self, binary_warped, left_fit, right_fit, figID = 0):
+        '''
+        Refines the polynomial fits using the prvious coarse estimate
+        '''
         # Grab activated pixels
         nonzeroy, nonzerox = self.warped_nonzeroy, self.warped_nonzerox
         # find lane pixels within previous fond polynomial
@@ -271,34 +276,26 @@ class laneFinder(object):
             plt.plot(right_fitx, self.ploty, color='yellow')
         return left_fitx, right_fitx, left_fit_refined, right_fit_refined
         
-# =============================================================================
-#     def paint_lines(self, binary_warped, left_fitx, right_fitx, figID = 0):
-#       
-#             # Create an image to draw on and an image to show the selection window
-#             out_img = np.dstack((binary_warped, binary_warped, binary_warped))*255
-#             window_img = np.zeros_like(out_img)
-#             # Color in left and right line pixels
-#          
-#             # Generate a polygon to illustrate the search window area
-#             # And recast the x and y points into usable format for cv2.fillPoly()
-#        
-#             # Draw the lane onto the warped blank image
-#             cv2.fillPoly(window_img, np.int_([left_line_pts]), (0,255, 0))
-#             cv2.fillPoly(window_img, np.int_([right_line_pts]), (0,255, 0))
-#             result = cv2.addWeighted(out_img, 1, window_img, 0.3, 0)
-#             
-#             # Plot the polynomial lines onto the image
-#             plt.plot(left_fitx, self.ploty, color='yellow')
-#             plt.plot(right_fitx, self.ploty, color='yellow')
-#         
-#         return result
-# 
-# 
-# =============================================================================
+    def measure_curvature_real(self, left_fit, right_fit):
+        '''
+        Calculates the curvature of polynomial functions in meters.
+        '''
+        y_eval = np.max(self.ploty)
+        left_curverad = ((1 + (2*left_fit[0]*y_eval*self.ym_per_pix+left_fit[1])**2)**(1.5))/abs(2*left_fit[0])
+        right_curverad = ((1 + (2*right_fit[0]*y_eval*self.ym_per_pix+right_fit[1])**2)**(1.5))/abs(2*right_fit[0])
+        return left_curverad, right_curverad
 
-
-
-
+    def measure_center_deviation(self, left_fit, right_fit):
+        y_eval = np.max(self.ploty) 
+        xBottomLeft = left_fit[0] * y_eval**2 + left_fit[1] * y_eval +  left_fit[2]
+        xBottomRight = right_fit[0] * y_eval**2 + right_fit[1] * y_eval +  right_fit[2]
+        return (self.cols/2.0 - (xBottomLeft + xBottomRight)/2.0)*self.xm_per_pix
+        
+    def output_message(self, left_fit, right_fit):
+        curvature = int(np.mean(self.measure_curvature_real(left_fit, right_fit)))
+        xdif = self.measure_center_deviation(left_fit, right_fit)
+        return 'Radius of Curvature = {:d}m\nVechicle is {:4.2f}(m) {} of center'.\
+            format(curvature, abs(xdif), 'left' if xdif < 0 else 'right') 
 
 
 #%%
