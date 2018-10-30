@@ -7,7 +7,7 @@ Create a image processing pipeline which does the following to extract/label the
 * Use color transforms, gradients, etc., to create a thresholded binary image.
 * Apply a perspective transform to rectify binary image ("birds-eye view").
 * Detect lane pixels and fit to find the lane boundary.
-* Determine the curvature of the lane and vehicle position with respect to center.
+* Determine the curvature of the lane and vehicle position with respect to the center.
 * Warp the detected lane boundaries back onto the original image.
 * Output visual display of the lane boundaries and numerical estimation of lane curvature and vehicle position.
 ---
@@ -36,10 +36,10 @@ Create a image processing pipeline which does the following to extract/label the
 ## Camera Calibration
 
 Camera calibration requires the following steps
-1. Acquire a few checkerboard image placed at different distance with multiple tilting orientations. The images for this project are provided in 'camera_cl/' folder.
+1. Acquire a few checkerboard image placed at different distances with multiple tilting orientations. The images for this project are provided in 'camera_cl/' folder.
 2. Compose "object points" to describe the corners appearance in each calibration image.
-3. Run "findChessboardCorners" in opencv to find the corners as "image points" to meet the chessboard speicifications by the "object points"
-4. Use the pairs of "object points" and "image points" to solve camera extrinsic matrix through LSE solutions and subsequently find the camera intrinsic matrix, which parameterizes the camera distrotion in 5 floating points numbers.
+3. Run "findChessboardCorners" in OpenCV to find the corners as "image points" to meet the chessboard specifications by the "object points"
+4. Use the pairs of "object points" and "image points" to solve camera extrinsic matrix through LSE solutions and subsequently find the camera intrinsic matrix, which parameterizes the camera distortion in 5 floating points numbers.
 5. Below shows the result after camera calibration is done correctly.
 ![alt text][image0]
 ---
@@ -70,33 +70,31 @@ The parameters below are selected for the pipeline, which is organized as a pyth
 
 ### 2. Undistortion
 
-Use the camera matrix derived from camera calibration to undistort each input frame. The difference in natural image may not be easily seen. Refers to the image above to visualize the difference before and after undistortion.
+Use the camera matrix derived from camera calibration to undistort each input frame. The difference in the natural image may not be easily seen. Refers to the image above to visualize the difference before and after undistortion.
 
 ![alt text][image1]
 
 ### 3. Color feature extraction
-
-The input image is first transformed to HLS color space. As color saturation is less sensitive to lighting condition, the "S" channle is selected and thresholded as suggested in the parameter dictionary above.
+The input image is first transformed to HLS color space. As color saturation is less sensitive to lighting condition, the "S" channel is selected and thresholded as suggested in the parameter dictionary above.
 
 ![alt text][image2]
 
 ### 4. Gradient feature extraction
-
-As we are searching for near-vertical lines, the gradeint change in the x-direction stands out as a lane discriminator. The feature is extract by Sobel filter with the threshold suggested in the parameter file as \[20,100\]. Below shows an example.
+As we are searching for near-vertical lines, the gradient change in the x-direction stands out as a lane discriminator. The feature is extracted by Sobel filter with the threshold suggested in the parameter file as \[20,100\]. Below shows an example.
 
 ![alt text][image3]
 
 ### 5. Combined feature mask
 
-Gradient/color features are often complimentary. Combined the two gives a much better look of the lanes as shown below.
+Gradient/color features are often complementary. Combined the two gives a much better look of the lanes as shown below.
 
 ![alt text][image4]
 
 
 ### 6. Perspective transfromation
 
-Lanes are perspective trasnfromed in 2D images. To have a better view of the lane for extraction, a reverse perspective transformation called warping will do the trick. The problem is how to acquire the trasnformation matrix.  
-To do this, we need straight line images as a groundtruth to derive the transformation. The two stright lines images in "test_images" folder serve the purpose. After many round of tuning, I have manully derive the source/destination window for perspective transformation as below. The two sets of points allow me to find the warper matrix.
+Lanes are perspective transformed in 2D images. To have a better view of the lane for extraction, a reverse perspective transformation called warping will do the trick. The problem is how to acquire the transformation matrix.  
+To do this, we need straight line images as a groundtruth to derive the transformation. The two straight lines images in "test_images" folder serve the purpose. After many rounds of tuning, I have manually derived the source/destination window for perspective transformation as below. The two sets of points allow me to find the warper matrix.Gradient/color features are often complementary. Combined the two gives a much better look of the lanes as shown below.
 
 | Source        | Destination   | 
 |:-------------:|:-------------:| 
@@ -115,14 +113,14 @@ The test image after warping appears to look as,
 
 ### 7. Find lane pixels through window search (1st polynomial fit)
 
-Two 200-pixel wide windows are placed in two halves (left/right) of the images hose inital locations are found through peak histogram search. From there, the window will be moved left/right based on the mean lane pixels locations in the urrent windows.
-After lane pixels are found, a 2nd polynomial fit to lines in both side describes how roughly they are located, which created two searching areas for refine search in the next stage.
+Two 200-pixel wide windows are placed in two halves (left/right) of the images hose initial locations are found through peak histogram search. From there, the window will be moved left/right based on the mean lane pixels locations in the current windows.
+After lane pixels are found, a 2nd polynomial fit to lines in both side describes how roughly they are located, which created two searching areas for refining search in the next stage.
 
 ![alt text][image7]
 
 ### 8. Refine polynomial fit
 
-Based on the windowed-search in the previous stage, the missing lane pixels can be better include in the resultant polynomial search zone. This zone are re-fit by another 2nd order ploynomial. And the result is fantasic as shown below.
+Based on the windowed-search in the previous stage, the missing lane pixels can be better include in the resultant polynomial search zone. This zone is re-fit by another 2nd order polynomial. And the result is fantastic as shown below.
 
 ![alt text][image8]
 
@@ -144,7 +142,7 @@ Both measurements are computed in pixels then converted to metric using the prov
 
 ### 11. Overlay lane zone and text on input image
 
-Finally, the painted lane zone and the computed lane parameters are superpose on top of the input image to complete the pipeline processing.
+Finally, the painted lane zone and the computed lane parameters are superposed on top of the input image to complete the pipeline processing.
 
 ![alt text][image10]
 
@@ -158,7 +156,7 @@ Here's a ![link to my video result][video1]
 
 ## Discussion
 
-1. The first problem I found is in the window search of lane pixels. The suggested threshold is 50 which I found is too low and resulting in shifting the windows by noise. This is often seen while dealing with dash lane lines.  I increased the parameter "minpix" to 150 and the problme wemt away.
+1. The first problem I found is in the window search of lane pixels. The suggested threshold is 50 which I found is too low and resulting in shifting the windows by noise. This is often seen while dealing with dash lane lines.  I increased the parameter "minpix" to 150 and the problem went away.
 
 2. My lane finder pipeline apparently failed on the two **challenge videos**.  There are a few factors that I observed as explained below.
 
@@ -168,7 +166,7 @@ Here's a ![link to my video result][video1]
         * Narrow lanes in mountain area: strutures along road lanes such as trenches are also creating edges parallel to road lanes and fails window search.
         * Combinations of all: any combination of the above features in the scene further aggrevate the false positive errors.
 
-3. The solution to all the problems in the challenge videos require multple agent. Below lists the agents whom can be combined to fix majority of the problem.
+3. The solution to all the problems in the challenge videos requires multiple agents. Below lists the agents whom can be combined to fix the majority of the problem.
 
         * Convolutional features: such as matched filter can be used to boost the signal of lane lines as they appear in certain color and certain shape.
         * Color space: Saturation channel along won't be enough.  We might combined with the Red channel in RGB color space to imrpove the color selection robustness.
