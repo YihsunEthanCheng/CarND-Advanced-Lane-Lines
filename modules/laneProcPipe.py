@@ -55,31 +55,22 @@ class laneFinder(object):
         pickle.dump((self.mtx, self.dist, self.Tp, self.TpInv),open('camera_params.pickle','wb'))
         
     def find_perspective_transform(self):
-        endSpan = 60
-        xL, xR = self.warp_xL , self.cols - self.warp_xL
-        src = np.array([[[200, 720]], [[self.cols//2-endSpan, 460]], [[self.cols//2+endSpan, 460]], [[1080,720]]], dtype= np.float32)
-        dst = np.array([[[xL, 720]], [[xL, 0]], [[xR, 0]], [[xR,720]]], dtype= np.float32)
+        endSpan = 59.5
+        src = np.array([[[200, self.rows-1]], 
+                        [[(self.cols-1)/2.0-endSpan, 460]], 
+                        [[(self.cols-1)/2.0+endSpan, 460]], 
+                        [[(self.cols-1)-200,self.rows-1]]], dtype= np.float32)
+        xL, xR = self.warp_xL , self.cols - self.warp_xL -1
+        dst = np.array([[[xL, self.rows-1]], [[xL, 0]], [[xR, 0]], [[xR,self.rows-1]]], dtype= np.float32)
         self.Tp = cv2.getPerspectiveTransform(src, dst)        
         self.TpInv = np.linalg.inv(self.Tp)
 
-    def warp_perspective(self, img, figID = 0):
-
-        wimg = cv2.warpPerspective(img, self.Tp, img.shape[:2][::-1], flags=cv2.INTER_LINEAR)
-        if figID > 0:
-            xL, xR = self.warp_xL , self.cols - self.warp_xL
-            wimg[:,xL-8:xL] = (255,0,0)
-            wimg[:,xR:xR+8] = (255,0,0)
-            fig = plt.figure(figID)
-            fig.clf()
-            axes = fig.subplots(1,2, sharey = True)
-            axes[0].imshow(img)
-            axes[0].set_title('original')
-            axes[1].imshow(wimg)
-            axes[1].set_title('Warped')
-            fig.subplots_adjust(left = 1/16., right = 1.0 - 1./16,
-                top = 1- 1./32, bottom = 1./32 , wspace=1./32 )
-        return wimg
+    def warp_perspective(self, img):
+        return cv2.warpPerspective(img, self.Tp, img.shape[:2][::-1], flags=cv2.INTER_LINEAR)
     
+    def unwarp_perspective(self,img):
+        return cv2.warpPerspective(img, self.TpInv, img.shape[:2][::-1], flags=cv2.INTER_LINEAR)
+
     
     def threshold(self, gray, cut):
         mask = np.zeros_like(gray)
@@ -166,7 +157,6 @@ class laneFinder(object):
                 leftx_current = int(np.mean(nonzerox[good_left_inds]))
             if len(good_right_inds) > self.minpix:
                 rightx_current = int(np.mean(nonzerox[good_right_inds]))
-                #%%
         # Concatenate the arrays of indices (previously was a list of lists of pixels)
         try:
             left_lane_inds = np.concatenate(left_lane_inds)
@@ -184,7 +174,7 @@ class laneFinder(object):
         left_fit = np.polyfit(lefty, leftx, 2)
         right_fit = np.polyfit(righty, rightx, 2)
         if figID > 0:
-            # Generate x and y values for plotting
+            # Generate x and y values for plottinge
             try:
                 left_fitx = left_fit[0]*self.ploty**2 + left_fit[1]*self.ploty + left_fit[2]
                 right_fitx = right_fit[0]*self.ploty**2 + right_fit[1]*self.ploty + right_fit[2]
@@ -306,7 +296,7 @@ class laneFinder(object):
             self.refine_polylanes(binary_warped, left_fit, right_fit)
         # step 8: generate overlay image from unwarping the painted lanes
         overlay = self.paintBetweenLines(np.zeros_like(img), left_fitx, right_fitx, (0,255,0))
-        unwarped_overlay = cv2.warpPerspective(overlay, self.TpInv, img.shape[:2][::-1], flags=cv2.INTER_LINEAR)
+        unwarped_overlay = self.unwarp_perspective(overlay)
         # step 9: compute output varaibles in curvature/center deviation
         xdev = self.measure_center_deviation(left_fit, right_fit)
         curvature = self.measure_curvature_real(left_fit, right_fit)
@@ -314,77 +304,93 @@ class laneFinder(object):
         return self.draw_overlay(undist,unwarped_overlay, curvature, xdev)
 
 
-    def dump_pipeline_staged_result(self, fn):
-        # dump undistortion results
-        
-        # dump perspective warping for all test image       
-        files =np.array(glob.glob(self.imgPath + '/*.jpg'))
-        for i, file in enumerate(files):
-            self.warp_perspective(self.undistort(mpimg.imread(file)), i+1)
-            fig = plt.figure(1)
-#            fig.savefig(self.outPath + '/warped_' + os.path.basename(file))
+    def dump_pipeline_staged_result(self, fn = ''):
+        if len(fn) == 0:        
+            # dump perspective warping for all test image       
+            files =np.array(glob.glob(self.imgPath + '/*.jpg'))
+            for i, file in enumerate(files):
+                img = self.undistort(mpimg.imread(file))
+                wimg = self.warp_perspective(img)
+                xL, xR = self.warp_xL , self.cols - self.warp_xL
+                # paint vertical line for diff
+                wimg[:,xL-8:xL] = (255,0,0)
+                wimg[:,xR:xR+8] = (255,0,0)
+                fig = plt.figure()
+                fig.clf()
+                axes = fig.subplots(1,2, sharey = True)
+                axes[0].imshow(img)
+                axes[0].set_title('original')
+                axes[1].imshow(wimg)
+                axes[1].set_title('Warped')
+                fig.subplots_adjust(left = 1/16., right = 1.0 - 1./16,
+                    top = 1- 1./32, bottom = 1./32 , wspace=1./32 )
+                fig.savefig(self.outPath + '/warped_' + os.path.basename(file))
+                return
         # dump pipeline intermediate results
-        # step 1: undistortion
-        file = fn
-        img = self.imread(file)
-        undist = self.undistort(img, 1)
-        fig, axes = plt.subplots(1,2, sharey = True)
+        # step 1: camera calibration dump undistortion results
+        img = mpimg.imread('camera_cal/calibration1.jpg')
+        undist = self.undistort(img)
+        fig = plt.figure()
+        axes = fig.subplots(1,2, sharey = True)
         axes[0].imshow(img)
         axes[0].set_title('Raw Input')
         axes[1].imshow(undist)
         axes[1].set_title('undistorted')
         fig.subplots_adjust(left = 1/16., right = 1.0 - 1./16,
                 top = 1- 1./32, bottom = 1./32 , wspace=1./32 )
-        fig.savefig(self.outPath + '/undistort_' + os.path.basename(file))
+        fig.savefig(self.outPath + '/undistort_calibration1.jpg')
+        
         # step 2: extract color feature
+        img = self.imread(fn)
+        undist = self.undistort(img)
         color_mask = self.select_color(undist)
-        plt.clf()
+        fig = plt.figure()
         plt.imshow(color_mask*255, cmap = 'gray')
         plt.title('color mask')
-        fig.savefig(self.outPath + '/colorMask_' + os.path.basename(file))
+        fig.savefig(self.outPath + '/colorMask_' + os.path.basename(fn))
         #step 3: extract x-gradient feature
         grad_mask = self.extract_gradient(undist)
-        plt.clf()
+        fig = plt.figure()
         plt.imshow(color_mask*255, cmap = 'gray')
         plt.title('x-gradient mask')
-        fig.savefig(self.outPath + '/xGradMask_' + os.path.basename(file))
+        fig.savefig(self.outPath + '/xGradMask_' + os.path.basename(fn))
         # step 4: combine color + gradient  
         combo = (color_mask | grad_mask)
-        plt.clf()
+        fig = plt.figure()
         plt.imshow(np.dstack((np.zeros_like(color_mask), grad_mask, color_mask))*255)
         plt.title('Combined color + gradient mask') 
-        fig.savefig(self.outPath + '/xGradColorMask_' + os.path.basename(file))
+        fig.savefig(self.outPath + '/xGradColorMask_' + os.path.basename(fn))
         # step 5: apply perspective transformation
         binary_warped = self.warp_perspective(combo)
-        plt.clf()
+        fig = plt.figure()
         plt.imshow(binary_warped*255)
         plt.title('binary warped mask') 
-        fig.savefig(self.outPath + '/binWarped_' + os.path.basename(file))
+        fig.savefig(self.outPath + '/binWarped_' + os.path.basename(fn))
         # step 6: find lines of a lane from polynomial fit
         left_fit, right_fit = self.find_polylanes(binary_warped, 1)
         plt.title('Windowed polynomial search') 
-        fig.savefig(self.outPath + '/polyfit_' + os.path.basename(file))
+        fig.savefig(self.outPath + '/polyfit_' + os.path.basename(fn))
         # step 7: refine polynomial fit with the guidanc of the previous polynomial fit
         left_fitx, right_fitx, left_fit_refined, right_fit_refined = \
             self.refine_polylanes(binary_warped, left_fit, right_fit, 1)
         plt.title('Refined polynomial fit') 
-        fig.savefig(self.outPath + '/refinePoly_' + os.path.basename(file))
+        fig.savefig(self.outPath + '/refinePoly_' + os.path.basename(fn))
         # step 8: generate overlay image from unwarping the painted lanes
         overlay = self.paintBetweenLines(np.zeros_like(undist), left_fitx, right_fitx, (0,255,0))
-        unwarped_overlay = cv2.warpPerspective(overlay, self.TpInv, img.shape[:2][::-1], flags=cv2.INTER_LINEAR)
-        plt.clf()
+        unwarped_overlay = self.unwarp_perspective(overlay)
+        fig = plt.figure()
         plt.imshow(unwarped_overlay)
         plt.title('Unwarped lane zone') 
-        fig.savefig(self.outPath + '/zone_' + os.path.basename(file))
+        fig.savefig(self.outPath + '/zone_' + os.path.basename(fn))
         # step 9: compute output varaibles in curvature/center deviation
         xdev = self.measure_center_deviation(left_fit, right_fit)
         curvature = self.measure_curvature_real(left_fit, right_fit)
         # step 10: overlay painted lanes and output text on top of the imput image
         final = self.draw_overlay(undist,unwarped_overlay, curvature, xdev)
-        plt.clf()
+        fig = plt.figure()
         plt.imshow(final)
         plt.title('Pipeline output') 
-        fig.savefig(self.outPath + '/out_' + os.path.basename(file))
+        fig.savefig(self.outPath + '/out_' + os.path.basename(fn))
         
         
         
