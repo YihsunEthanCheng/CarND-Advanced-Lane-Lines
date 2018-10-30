@@ -28,7 +28,20 @@ params = {
         'xm_per_pix': 3.7/700, # meters per pixel in x dimension
         'warp_xL': 320
         } 
-        
+
+#%%        
 lane_detect = laneFinder(params)
 lane_detect.calib()
-lane_detect.dump_pipeline_staged_result()
+
+#%% dump one test image for write-up
+lane_detect.dump_pipeline_staged_result('test4.jpg')
+img_out = lane_detect.process(img)
+imshow(img_out)
+
+#%% video labeling
+from moviepy.editor import VideoFileClip
+fn = 'project_video.mp4'
+test_clip = VideoFileClip(fn)
+test_clip_out = test_clip.fl_image(lane_detect.process)
+%time test_clip_out.write_videofile('output_images/labeled_' + fn, audio=False)
+
