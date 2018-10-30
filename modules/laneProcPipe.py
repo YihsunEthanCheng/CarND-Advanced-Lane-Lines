@@ -328,18 +328,20 @@ class laneFinder(object):
                 return
         # dump pipeline intermediate results
         # step 1: camera calibration dump undistortion results
-        img = mpimg.imread('camera_cal/calibration1.jpg')
-        undist = self.undistort(img)
-        fig = plt.figure()
-        axes = fig.subplots(1,2, sharey = True)
-        axes[0].imshow(img)
-        axes[0].set_title('Raw Input')
-        axes[1].imshow(undist)
-        axes[1].set_title('undistorted')
-        fig.subplots_adjust(left = 1/16., right = 1.0 - 1./16,
-                top = 1- 1./32, bottom = 1./32 , wspace=1./32 )
-        fig.savefig(self.outPath + '/undistort_calibration1.jpg')
-        
+        imgs = [ mpimg.imread('camera_cal/calibration1.jpg'), self.imread(fn)]
+        fns = ['calibration1.jpg', fn]
+        for fn_i, img in zip(fns, imgs): 
+            undist = self.undistort(img)
+            fig = plt.figure()
+            axes = fig.subplots(1,2, sharey = True)
+            axes[0].imshow(img)
+            axes[0].set_title('Raw Input')
+            axes[1].imshow(undist)
+            axes[1].set_title('undistorted')
+            fig.subplots_adjust(left = 1/16., right = 1.0 - 1./16,
+                    top = 1- 1./32, bottom = 1./32 , wspace=1./32 )
+            fig.savefig(self.outPath + '/undistort_' + fn_i)
+                    
         # step 2: extract color feature
         img = self.imread(fn)
         undist = self.undistort(img)
