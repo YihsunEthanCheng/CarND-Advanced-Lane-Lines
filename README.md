@@ -24,7 +24,7 @@ Create a image processing pipeline which does the following to extract/label the
 [image8]: ./output_images/refinePoly_test4.jpg "Refine poly fit" 
 [image9]: ./output_images/zone_test4.jpg "Unwarped lane zone"
 [image10]: ./output_images/out_test4.jpg  "Output"
-[video1]: ./output_images/labeled_project_video.mp4 "Video"
+[video1]:  ./output_images/labeled_project_video.mp4 "Video"
 
 ---
 ## How to run the project
@@ -152,7 +152,7 @@ Finally, the painted lane zone and the computed lane parameters are superpose on
 
 ## Pipeline (video)
 
-Here's a [link to my video result](./output_images/labeled_project_video.mp4)
+Here's a ![link to my video result][video1]
 
 ---
 
