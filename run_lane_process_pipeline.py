@@ -40,8 +40,18 @@ imshow(img_out)
 
 #%% video labeling
 from moviepy.editor import VideoFileClip
-fn = 'project_video.mp4'
+
+def label_video(fn):
+    test_clip = VideoFileClip(fn)
+    test_clip_out = test_clip.fl_image(lane_detect.process)
+    %time test_clip_out.write_videofile('output_images/labeled_' + fn, audio=False)
+
+#%%fn = 'project_video.mp4'
+
+fn = 'challenge_video.mp4'
+
 test_clip = VideoFileClip(fn)
 test_clip_out = test_clip.fl_image(lane_detect.process)
 %time test_clip_out.write_videofile('output_images/labeled_' + fn, audio=False)
 
+fn = 'harder_challenge_video.mp4'
