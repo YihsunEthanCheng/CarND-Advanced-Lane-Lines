@@ -152,7 +152,7 @@ Finally, the painted lane zone and the computed lane parameters are superpose on
 
 ## Pipeline (video)
 
-Here's a [link to my video result](./labeled_project_video.mp4)
+Here's a [link to my video result](./output_images/labeled_project_video.mp4)
 
 ---
 
