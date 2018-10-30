@@ -162,17 +162,17 @@ Here's a [link to my video result](./labeled_project_video.mp4)
 
 2. My lane finder pipeline apparently failed on the two **challenge videos**.  There are a few caused that I observed as explained below.
 
-**low light condition**: In low light situation, the saturation and gradient are both weakened.
-**Shading**: Stuctured shading such as buildings or bridges often create gradient features to confuse the gradient extraction.
-**Vertical texture on road**: very often, highways are constructed by long concrete plates which create vertical edges to confuse the edge extractor. 
-**Narrow lanes in mountain area**: strutures along road lanes such as trenches are also creating edges parallel to road lanes and fails window search.
-**Combinations of all**: any combination of the above features in the scene further aggrevate the false positive errors.
+        * low light condition: In low light situation, the saturation and gradient are both weakened.
+        * Shading: Stuctured shading such as buildings or bridges often create gradient features to confuse the gradient extraction.
+        * Vertical texture on road: very often, highways are constructed by long concrete plates which create vertical edges to confuse the edge extractor. 
+        * Narrow lanes in mountain area: strutures along road lanes such as trenches are also creating edges parallel to road lanes and fails window search.
+        * Combinations of all: any combination of the above features in the scene further aggrevate the false positive errors.
 
 3. The solution to all the problems in the challenge videos require multple agent. Below lists the agents whom can be combined to fix majority of the problem.
 
-* Convolutional features: such as matched filter can be used to boost the signal of lane lines as they appear in certain color and certain shape.
-* Color space: Saturation channel along won't be enough.  We might combined with the Red channel in RGB color space to imrpove the color selection robustness.
-* Kalman filters: lane lines are predictable in the temporal space. As soon as we identify corret lanes, we can begin to track the lane more closely using the speed of the vehicle to predict the lane line locations in the next frame. This will help elimiate a lot of false positives.
+        * Convolutional features: such as matched filter can be used to boost the signal of lane lines as they appear in certain color and certain shape.
+        * Color space: Saturation channel along won't be enough.  We might combined with the Red channel in RGB color space to imrpove the color selection robustness.
+        * Kalman filters: lane lines are predictable in the temporal space. As soon as we identify corret lanes, we can begin to track the lane more closely using the speed of the vehicle to predict the lane line locations in the next frame. This will help elimiate a lot of false positives.
 
 
 
