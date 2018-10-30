@@ -160,7 +160,7 @@ Here's a [link to my video result](./labeled_project_video.mp4)
 
 1. The first problem I found is in the window search of lane pixels. The suggested threshold is 50 which I found is too low and resulting in shifting the windows by noise. This is often seen while dealing with dash lane lines.  I increased the parameter "minpix" to 150 and the problme wemt away.
 
-2. My lane finder pipeline apparently failed on the two **challenge videos**.  There are a few caused that I observed as explained below.
+2. My lane finder pipeline apparently failed on the two **challenge videos**.  There are a few factors that I observed as explained below.
 
         * low light condition: In low light situation, the saturation and gradient are both weakened.
         * Shading: Stuctured shading such as buildings or bridges often create gradient features to confuse the gradient extraction.
