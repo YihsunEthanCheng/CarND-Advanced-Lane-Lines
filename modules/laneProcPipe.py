@@ -326,6 +326,7 @@ class laneFinder(object):
                     top = 1- 1./32, bottom = 1./32 , wspace=1./32 )
                 fig.savefig(self.outPath + '/warped_' + os.path.basename(file))
                 return
+        
         # dump pipeline intermediate results
         # step 1: camera calibration dump undistortion results
         imgs = [ mpimg.imread('camera_cal/calibration1.jpg'), self.imread(fn)]
@@ -350,33 +351,43 @@ class laneFinder(object):
         plt.imshow(color_mask*255, cmap = 'gray')
         plt.title('color mask')
         fig.savefig(self.outPath + '/colorMask_' + os.path.basename(fn))
+        
         #step 3: extract x-gradient feature
         grad_mask = self.extract_gradient(undist)
         fig = plt.figure()
         plt.imshow(color_mask*255, cmap = 'gray')
         plt.title('x-gradient mask')
         fig.savefig(self.outPath + '/xGradMask_' + os.path.basename(fn))
+        
         # step 4: combine color + gradient  
         combo = (color_mask | grad_mask)
         fig = plt.figure()
         plt.imshow(np.dstack((np.zeros_like(color_mask), grad_mask, color_mask))*255)
         plt.title('Combined color + gradient mask') 
         fig.savefig(self.outPath + '/xGradColorMask_' + os.path.basename(fn))
+        
         # step 5: apply perspective transformation
         binary_warped = self.warp_perspective(combo)
         fig = plt.figure()
         plt.imshow(binary_warped*255)
         plt.title('binary warped mask') 
         fig.savefig(self.outPath + '/binWarped_' + os.path.basename(fn))
+        
         # step 6: find lines of a lane from polynomial fit
+        fig = plt.figure(1)
+        fig.clf()
         left_fit, right_fit = self.find_polylanes(binary_warped, 1)
         plt.title('Windowed polynomial search') 
         fig.savefig(self.outPath + '/polyfit_' + os.path.basename(fn))
+        
         # step 7: refine polynomial fit with the guidanc of the previous polynomial fit
+        fig = plt.figure(2)
+        fig.clf()
         left_fitx, right_fitx, left_fit_refined, right_fit_refined = \
-            self.refine_polylanes(binary_warped, left_fit, right_fit, 1)
+            self.refine_polylanes(binary_warped, left_fit, right_fit, 2)
         plt.title('Refined polynomial fit') 
         fig.savefig(self.outPath + '/refinePoly_' + os.path.basename(fn))
+        
         # step 8: generate overlay image from unwarping the painted lanes
         overlay = self.paintBetweenLines(np.zeros_like(undist), left_fitx, right_fitx, (0,255,0))
         unwarped_overlay = self.unwarp_perspective(overlay)
@@ -384,9 +395,11 @@ class laneFinder(object):
         plt.imshow(unwarped_overlay)
         plt.title('Unwarped lane zone') 
         fig.savefig(self.outPath + '/zone_' + os.path.basename(fn))
+        
         # step 9: compute output varaibles in curvature/center deviation
         xdev = self.measure_center_deviation(left_fit, right_fit)
         curvature = self.measure_curvature_real(left_fit, right_fit)
+        
         # step 10: overlay painted lanes and output text on top of the imput image
         final = self.draw_overlay(undist,unwarped_overlay, curvature, xdev)
         fig = plt.figure()
