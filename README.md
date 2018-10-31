@@ -29,9 +29,9 @@ Create a image processing pipeline which does the following to extract/label the
 ---
 ## How to run the project
 
-1. "LaneFinder" is an image processing/recognition pipeline implemented as a python class in **"modules/laneProcPipe.py"**
-2. The project can be executed by running the entry file "run_lane_proicess_pipeline.py"
-3. The labeled video and intermediate result at each stage are located "output_images/" folder
+1. "LaneFinder" is an image processing/recognition pipeline implemented as a python class in [**modules/laneProcPipe.py**](./modules/laneProcPipe.py)
+2. The project can be executed by running the entry file [**run_lane_process_pipeline.py**](./run_lane_process_pipeline.py)
+3. The labeled video and intermediate result at each stage are located in [**output_images**](./output_images) folder
 ---
 ## Camera Calibration
 
@@ -47,7 +47,7 @@ Camera calibration requires the following steps
 
 ### 1. Pipeline parameters
 
-The parameters below are selected for the pipeline, which is organized as a python dict in  "run_lane_proicess_pipeline.py".
+The parameters below are selected for the pipeline, which is organized as a python dictionary in "run_lane_proicess_pipeline.py".
 
 **params** = { </br>
         'calibPath' : 'camera_cal',</br>
@@ -75,12 +75,12 @@ Use the camera matrix derived from camera calibration to undistort each input fr
 ![alt text][image1]
 
 ### 3. Color feature extraction
-The input image is first transformed to HLS color space. As color saturation is less sensitive to lighting condition, the "S" channel is selected and thresholded as suggested in the parameter dictionary above.
+The input image is first transformed to HLS color space. As color saturation is less sensitive to lighting condition, the "S" channel is selected and thresholded as specified in the parameter dictionary above.
 
 ![alt text][image2]
 
 ### 4. Gradient feature extraction
-As we are searching for near-vertical lines, the gradient change in the x-direction stands out as a lane discriminator. The feature is extracted by Sobel filter with the threshold suggested in the parameter file as \[20,100\]. Below shows an example.
+As we are searching for near-vertical lines, the gradient change in the x-direction stands out as a lane discriminator. The feature is extracted by Sobel filter with the threshold specified in the parameter dictionary as \[20,100\]. Below shows an example.
 
 ![alt text][image3]
 
@@ -103,24 +103,24 @@ To do this, we need straight line images as a groundtruth to derive the transfor
 | 698.5,  460.  | 959.,   0.    |
 | 1079.,  719.  | 959., 719.    |
 
-I verified that my perspective transform was working as expected by drawing the `src` and `dst` points onto a test image and its warped counterpart to verify that the lines appear parallel in the warped image.
+I verified that my perspective transform was working as expected by manually selecting the `src` and `dst` points from the strightline test image and its warped counterpart to verify that the lines appear straight and parallel in the warped image.
 
 ![alt text][image5]
 
-The test image after warping appears to look as,
+The test image after warping appears to look pretty good as,
 
 ![alt text][image6]
 
 ### 7. Find lane pixels through window search (1st polynomial fit)
 
-Two 200-pixel wide windows are placed in two halves (left/right) of the images hose initial locations are found through peak histogram search. From there, the window will be moved left/right based on the mean lane pixels locations in the current windows.
-After lane pixels are found, a 2nd polynomial fit to lines in both side describes how roughly they are located, which created two searching areas for refining search in the next stage.
+Two 200-pixel wide windows are placed in two halves (left/right) of the images whose initial locations are found through peak histogram search. From there, the window will be moved left/right based on the mean pixels locations in the current windows.
+After potenital lane pixels are located in all windoes, a 2nd polynomial fit to lines in both side describes how roughly they are located, which created two searching areas for refining search in the next stage.
 
 ![alt text][image7]
 
 ### 8. Refine polynomial fit
 
-Based on the windowed-search in the previous stage, the missing lane pixels can be better include in the resultant polynomial search zone. This zone is re-fit by another 2nd order polynomial. And the result is fantastic as shown below.
+Based on the windowed-search in the previous stage, the missing lane pixels can be better include in the resultant polynomial search zone. This zone is re-fit by another 2nd order polynomial. And the result is fantastic as below.
 
 ![alt text][image8]
 
@@ -156,18 +156,18 @@ Here's a ![link to my video result][video1]
 
 ## Discussion
 
-1. The first problem I found is in the window search of lane pixels. The suggested threshold is 50 which I found is too low and resulting in shifting the windows by noise. This is often seen while dealing with dash lane lines.  I increased the parameter "minpix" to 150 and the problem went away.
+1. The first problem I found is during the window search of lane pixels. The suggested threshold is 50 which I found is too low and resulting in shifting the windows by noise. This is often seen while dealing with dash lane lines with lane missing in the window.  I increased the parameter "minpix" to 150 and the problem went away.
 
 2. My lane finder pipeline apparently failed on the two **challenge videos**.  There are a few factors that I observed as explained below.
 
-        * low light condition: In low light situation, the saturation and gradient are both weakened.
-        * Shading: Stuctured shading such as buildings or bridges often create gradient features to confuse the gradient extraction.
-        * Vertical texture on road: very often, highways are constructed by long concrete plates which create vertical edges to confuse the edge extractor. 
-        * Narrow lanes in mountain area: strutures along road lanes such as trenches are also creating edges parallel to road lanes and fails window search.
+        * low light condition: Under low light, the saturation and gradient of lanes are both weakened and become undistinguishable.
+        * Shading: Stuctured shading such as from buildings or bridges often create gradient features to confuse the gradient extractor.
+        * Vertical texture on roads: very often, highways are constructed by parallel long concrete plates which create vertical edges to confuse the edge extractor. 
+        * Narrow lanes in mountain area: parallel strutures along road lanes such as trenches are also creating edges parallel to road lanes and fails window search.
         * Combinations of all: any combination of the above features in the scene further aggrevate the false positive errors.
 
-3. The solution to all the problems in the challenge videos requires multiple agents. Below lists the agents whom can be combined to fix the majority of the problem.
+3. The solution to all the problems in the challenge videos requires multiple agents. Below lists the agents whom can be combined to fix the majority of the problems.
 
-        * Convolutional features: such as matched filter can be used to boost the signal of lane lines as they appear in certain color and certain shape.
-        * Color space: Saturation channel along won't be enough.  We might combined with the Red channel in RGB color space to imrpove the color selection robustness.
-        * Kalman filters: lane lines are predictable in the temporal space. As soon as we identify corret lanes, we can begin to track the lane more closely using the speed of the vehicle to predict the lane line locations in the next frame. This will help elimiate a lot of false positives.
+        * Convolutional features: such as matched filters can boost the signal of lane lines as they appear in certain color and certain shape/width.
+        * Color space: Saturation channel along won't be enough.  We might combine it with the Red channel in RGB color space to imrpove the color selection robustness.
+        * Kalman filters: lane lines are predictable in the temporal space. As soon as we identify corret lanes, we can begin to track the lane more closely using the known speed of the vehicle to predict the lane line locations in the next frame. This will help elimiate a lot of false positives.
