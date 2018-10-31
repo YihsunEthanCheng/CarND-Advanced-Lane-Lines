@@ -47,7 +47,7 @@ Camera calibration requires the following steps
 
 ### 1. Pipeline parameters
 
-The parameters below are selected for the pipeline, which is organized as a python dictionary in "run_lane_proicess_pipeline.py".
+The parameters below are selected for the pipeline, which is organized as a python dictionary in "run_lane_process_pipeline.py".
 
 **params** = { </br>
         'calibPath' : 'camera_cal',</br>
