@@ -355,7 +355,7 @@ class laneFinder(object):
         #step 3: extract x-gradient feature
         grad_mask = self.extract_gradient(undist)
         fig = plt.figure()
-        plt.imshow(color_mask*255, cmap = 'gray')
+        plt.imshow(grad_mask*255, cmap = 'gray')
         plt.title('x-gradient mask')
         fig.savefig(self.outPath + '/xGradMask_' + os.path.basename(fn))
         
